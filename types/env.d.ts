@@ -1,0 +1,22 @@
+declare module '@env' {
+  export const API_BASE_URL: string;
+  export const API_VERSION: string;
+  export const COMPANY_DB: string;
+  export const LOGIN_ENDPOINT: string;
+  export const USERS_SERVICE_ENDPOINT: string;
+  export const CART_MASTER_ENDPOINT: string;
+  export const HANGER_ENDPOINT: string;
+  export const BIN_LOCATIONS_ENDPOINT: string;
+  export const ITEMS_ENDPOINT: string;
+  export const IMMATURE_PLANNER_ENDPOINT: string;
+  export const BATCH_NUMBER_DETAILS_ENDPOINT: string;
+  export const NPFET_ENDPOINT: string;
+  export const NPFETLINES_ENDPOINT: string;
+  export const BATCH_SERVICE_ENDPOINT: string;
+  export const NBNLG_ENDPOINT: string;
+  export const APP_NAME: string;
+  export const APP_VERSION: string;
+  export const API_TIMEOUT: string;
+  export const BATCH_TIMEOUT: string;
+  export const BATCH_SIZE: string;
+}
