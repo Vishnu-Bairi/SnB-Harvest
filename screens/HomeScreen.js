@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Alert, Modal, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Alert, Modal, FlatList, ActivityIndicator, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_URLS, COMPANY_CONFIG, APP_CONFIG } from '../config/api';
 
 export default function HomeScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [metrcTag, setMetrcTag] = useState('');
   const [locationInput, setLocationInput] = useState('');
   const [tagDetails, setTagDetails] = useState(null);
@@ -811,6 +813,7 @@ export default function HomeScreen({ navigation }) {
               harvestPayload2.U_NWFWT = Number(harvestPayload2.U_NWFWT) + Number(existingRecord.U_NWFWT || 0);
               harvestPayload2.U_NHOWT = Number(harvestPayload2.U_NHOWT) + Number(existingRecord.U_NHOWT || 0);
 
+              console.log('Updated harvest payload2:', harvestPayload2);
               // Update existing record
               const updateResponse = await fetch(`${API_URLS.NPFET}(${existingRecord.DocNum})`, {
                 method: 'PATCH',
@@ -827,8 +830,8 @@ export default function HomeScreen({ navigation }) {
               let logResponse;
               if (updateResponse.ok) {
                 try {
-                  const responseData = await updateResponse.json();
-                  logResponse = responseData.DocNum || "Success";
+                  // const responseData = await updateResponse.json();
+                  logResponse = "";
                 } catch (parseError) {
                   logResponse = "Success (parse error)";
                 }
@@ -845,7 +848,7 @@ export default function HomeScreen({ navigation }) {
                 U_NDTTM: currentDate,
                 U_NUSID: username,
                 U_NLGMT: "PATCH",
-                U_NLURL: "b1s/v1/NPFET",
+                U_NLURL: `b1s/v1/NPFET(${existingRecord.DocNum})`,
                 U_NLGBD: JSON.stringify(harvestPayload2),
                 U_NLGRP: logResponse,
                 U_NLGST: updateResponse.ok ? 200 : 400,
@@ -892,12 +895,12 @@ export default function HomeScreen({ navigation }) {
               }
               
               async function callBatchService(batchUrl, callBack) {
-                var reqHeader = "--clone_batch--\r\nContent-Type:application/http  \r\nContent-Transfer-Encoding:binary\r\n \r\n";
+                var reqHeader = `--clone_batch--\r\nContent-Type:application/http  \r\nContent-Transfer-Encoding:binary\r\n \r\n`;
                 var payLoad = reqHeader;
                 
                 batchUrl.forEach((sObj, i) => {
-                  payLoad = payLoad + sObj.method + " " + sObj.entity + "\r\n \r\n";
-                  payLoad = payLoad + JSON.stringify(sObj.data) + "\r\n \r\n";
+                  payLoad = payLoad + sObj.method + " " + sObj.entity + `\r\n \r\n`;
+                  payLoad = payLoad + JSON.stringify(sObj.data) + `\r\n \r\n`;
                   if (batchUrl.length - 1 === i) {
                     payLoad = payLoad + "--clone_batch--";
                   } else {
@@ -1030,7 +1033,7 @@ export default function HomeScreen({ navigation }) {
             }
           } else {
             console.log('No existing record found, creating new one...');
-            console.log('Harvest payload:', harvestPayload);
+            console.log('Harvest payload2:', harvestPayload2);
             
             // POST to NPFET
             const createResponse = await fetch(API_URLS.NPFET, {
@@ -1039,7 +1042,7 @@ export default function HomeScreen({ navigation }) {
                 'Content-Type': 'application/json',
                 'Authorization': `Basic ${authToken}`,
               },
-              body: JSON.stringify(harvestPayload)
+              body: JSON.stringify(harvestPayload2)
             });
 
             
@@ -1069,7 +1072,7 @@ export default function HomeScreen({ navigation }) {
               U_NUSID: username,
               U_NLGMT: "POST",
               U_NLURL: "b1s/v1/NPFET",
-              U_NLGBD: JSON.stringify(harvestPayload),
+              U_NLGBD: JSON.stringify(harvestPayload2),
               U_NLGRP: createLogResponse,
               U_NLGST: createResponse.ok ? 200 : 400,
               U_NAPP: APP_CONFIG.NAME
@@ -1250,7 +1253,7 @@ export default function HomeScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header with Logo and Logout */}
       <View style={styles.header}>
         <Image
@@ -1301,16 +1304,17 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.inputSection}>
           <Text style={styles.harvestTitle}>Harvest</Text>
           
-          {/* Location Input - Aligned to the right */}
-          <View style={styles.locationInputContainer}>
-            <Text style={styles.locationLabel}>Location:</Text>
+          {/* Location Input - Above Harvest Name */}
+          <View style={styles.metrcInputContainer}>
+            <View style={styles.metrcLabelContainer}>
+              <Text style={styles.metrcLabel}>Location</Text>
+            </View>
             <TextInput
               ref={locationRef}
-              style={styles.locationInput}
+              style={styles.metrcInput}
               placeholder="Scan or enter location"
               value={locationInput}
               onChangeText={setLocationInput}
-              autoCapitalize="characters"
               returnKeyType="next"
               editable={!tagDetails}
               onSubmitEditing={() => {
@@ -1339,10 +1343,8 @@ export default function HomeScreen({ navigation }) {
               placeholder={tagDetails ? "Harvest ID" : "Scan or enter harvest name"}
               value={tagDetails ? tagDetails.harvestName : metrcTag}
               onChangeText={tagDetails ? undefined : setMetrcTag}
-              autoCapitalize="characters"
               onSubmitEditing={tagDetails ? undefined : () => handleMetrcTagEnter(metrcTag)}
               returnKeyType="done"
-              autoFocus={true}
               editable={!tagDetails && !isLoadingHarvestDetails}
               ref={metrcTagInputRef}
             />
@@ -1382,20 +1384,18 @@ export default function HomeScreen({ navigation }) {
                   value={cartInputText}
                   onChangeText={handleCartInputChange}
                   onSubmitEditing={validateCartInput}
-                  placeholder="Enter cart name"
-                  autoCapitalize="characters"
+                  placeholder="Scan or enter cart name"
                   ref={cartRef}
                   returnKeyType="next"
                 />
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Cart Weight (lb)</Text>
+                <Text style={styles.detailLabel}>Cart Wgt (lb)</Text>
                 <TextInput
                   style={styles.modernInput}
                   value={tagDetails.cartWeight}
                   onChangeText={(text) => updateField('cartWeight', text)}
-                  placeholder="Enter cart weight"
                   editable={false}
                 />
               </View>
@@ -1407,8 +1407,7 @@ export default function HomeScreen({ navigation }) {
                   value={hangerInputText}
                   onChangeText={handleHangerInputChange}
                   onSubmitEditing={validateHangerInput}
-                  placeholder="Enter hanger name"
-                  autoCapitalize="characters"
+                  placeholder="Scan or enter hanger type"
                   ref={hangerRef}
                   returnKeyType="next"
                 />
@@ -1425,7 +1424,7 @@ export default function HomeScreen({ navigation }) {
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Hanger Weight (lb)</Text>
+                <Text style={styles.detailLabel}>Hanger Wgt (lb)</Text>
                 <TextInput
                   style={styles.readOnlyInput}
                   value={tagDetails.hangerWeight}
@@ -1562,7 +1561,7 @@ export default function HomeScreen({ navigation }) {
 
       {/* Fixed Footer with Submit and Cancel Buttons - Show when fields are visible */}
       {tagDetails && (
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 15) }]}>
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
@@ -1572,7 +1571,7 @@ export default function HomeScreen({ navigation }) {
             disabled={isSubmitting}
           >
             <Text style={styles.submitButtonText}>
-              {isSubmitting ? 'Submitting...' : 'Harvest Plants'}
+              {isSubmitting ? 'Harvesting...' : 'Harvest Plants'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1714,7 +1713,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -1729,7 +1728,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    // paddingVertical: 10,
+    paddingTop: 22,
+    paddingBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -1737,8 +1738,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   headerLogo: {
-    width: 130,
-    height: 30,
+    width: 140,
+    height: 40,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1782,7 +1783,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     color: 'black',
     fontWeight: '500',
-    minHeight: 40,
+    minHeight: 30,
   },
 
   detailsSection: {
@@ -1814,7 +1815,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    textTransform: 'capitalize',
     marginBottom: 6,
   },
   modernInput: {
@@ -1874,14 +1874,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     backgroundColor: 'white',
-    paddingVertical: 15,
+    paddingVertical: 8,
     paddingHorizontal: 20,
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
   cancelButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
     backgroundColor: '#DB5F5F',
     borderRadius: 8,
     minWidth: 120,
@@ -1894,8 +1894,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   submitButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
     backgroundColor: '#53B253',
     borderRadius: 8,
     minWidth: 120,
@@ -2067,41 +2067,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     letterSpacing: 0.3,
   },
-  // Location input container styles - aligned to the right
-  locationInputContainer: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    paddingLeft: 10,
-    paddingRight: 5,
-    paddingTop: 2,
-    paddingBottom: 2,
-    borderWidth: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    alignSelf: 'flex-end',
-    width: '70%',
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationLabel: {
-    fontSize: 14,
-    color: 'black',
-    fontWeight: '500',
-    marginRight: 5,
-  },
-  locationInput: {
-    borderWidth: 0,
-    paddingLeft: 10,
-    fontSize: 16,
-    backgroundColor: 'transparent',
-    color: 'black',
-    // minHeight: 10,
-    textAlign: 'right',
-  },
+
   // Metrc input container styles
   metrcInputContainer: {
     backgroundColor: 'white',
@@ -2111,6 +2077,7 @@ const styles = StyleSheet.create({
     paddingTop: 5,
     paddingBottom: 5,
     borderWidth: 0,
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

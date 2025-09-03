@@ -1,16 +1,16 @@
 export default {
   expo: {
-    name: "SnB-Harvest",
-    slug: "SnB-Harvest",
-    version: "1.0.0",
+    name: "SnB Harvest",
+    slug: "SnB Harvest",
+    version: "1.0.2",
     orientation: "portrait",
-    icon: "./assets/icon.png",
+    icon: "./assets/images/icon.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
     splash: {
-      image: "./assets/splash-icon.png",
-      resizeMode: "contain",
-      backgroundColor: "#ffffff"
+      image: "./assets/images/splash-icon.png",
+      resizeMode: "cover",
+      backgroundColor: "transparent"
     },
     ios: {
       supportsTablet: true,
@@ -21,8 +21,8 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#ffffff"
+        foregroundImage: "./assets/images/adaptive-icon.png",
+        backgroundColor: "transparent"
       },
       edgeToEdgeEnabled: true,
       package: "com.seedandbeyond.Harvest"
@@ -30,6 +30,42 @@ export default {
     extra: {
       eas: {
         projectId: "f4ac27b7-e9ff-4f7f-9bd9-b0e79883c802"
+      },
+      // API Configuration
+      apiConfig: {
+        // Base URL
+        baseUrl: 'https://ghdev.seedandbeyond.com:50000',
+        apiVersion: '/b1s/v1',
+        
+        // Company Configuration
+        companyDb: '__QAS',
+        
+        // Authentication Endpoints
+        login: '/Login',
+        usersServiceGetCurrentUser: '/UsersService_GetCurrentUser',
+        
+        // Data Endpoints
+        cartMaster: '/U_CART_MASTER',
+        hanger: '/U_HANGER',
+        binLocations: '/BinLocations',
+        items: '/Items',
+        immaturePlanner: '/sml.svc/CV_IMMATURE_PLANNER_VW',
+        batchNumberDetails: '/BatchNumberDetails',
+        npfet: '/NPFET',
+        npfetlines: '/NPFETLINES',
+        batchService: '/$batch',
+        nbnlg: '/NBNLG',
+        
+        // App Configuration
+        appName: 'SH',
+        appVersion: '1.0.2',
+        
+        // Timeout Configuration (in milliseconds)
+        apiTimeout: 30000,
+        batchTimeout: 60000,
+        
+        // Batch Processing
+        batchSize: 200,
       }
     },
   },

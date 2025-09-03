@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,6 +8,7 @@ export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Custom alert states
   const [showCustomAlert, setShowCustomAlert] = useState(false);
@@ -19,9 +20,55 @@ export default function LoginScreen({ navigation }) {
   const [usernameError, setUsernameError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
 
+  // Check for existing auth token on component mount
+  useEffect(() => {
+    checkAuthToken();
+  }, []);
+
   const generateBasicAuthToken = (username, password) => {
     const credentials = `${username}:${password}`;
     return btoa(credentials); // Base64 encoding
+  };
+
+  const checkAuthToken = async () => {
+    try {
+      const storedToken = await AsyncStorage.getItem('authToken');
+      const storedUsername = await AsyncStorage.getItem('username');
+      
+      if (storedToken && storedUsername) {
+        // Validate the token by making a test API call
+        try {
+          const response = await fetch(API_URLS.USERS_SERVICE, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${storedToken}`,
+            }
+          });
+
+          if (response.ok) {
+            // Token is valid, navigate to Home screen
+            navigation.replace('Home');
+            return;
+          } else {
+            // Token is invalid, clear stored data
+            await AsyncStorage.removeItem('authToken');
+            await AsyncStorage.removeItem('username');
+            await AsyncStorage.removeItem('currentUser');
+          }
+        } catch (error) {
+          console.error('Error validating auth token:', error);
+          // Clear stored data on validation error
+          await AsyncStorage.removeItem('authToken');
+          await AsyncStorage.removeItem('username');
+          await AsyncStorage.removeItem('currentUser');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking auth token:', error);
+    } finally {
+      setIsCheckingAuth(false);
+    }
   };
 
   // Custom alert display function
@@ -210,6 +257,22 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  // Show loading screen while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Image
+            source={require('../assets/images/icon.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.loadingText}>Checking authentication...</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Login Form Container */}
@@ -233,7 +296,6 @@ export default function LoginScreen({ navigation }) {
             placeholder="Enter your username"
             value={username}
             onChangeText={validateUsername}
-            autoCapitalize="none"
             editable={!isLoading}
           />
           {usernameError && <Text style={styles.errorText}>Username is required</Text>}
@@ -336,12 +398,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 5,
+    // paddingTop: 10,
+    // paddingBottom: 10,
   },
   formContainer: {
     backgroundColor: 'white',
     borderRadius: 25,
-    padding: 30,
+    padding: 15,
+    paddingTop: 1,
     width: '100%',
     maxWidth: 400,
     shadowColor: '#000',
@@ -508,5 +573,17 @@ const styles = StyleSheet.create({
   },
   customAlertModalButtonInfo: {
     backgroundColor: '#1976d2',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#333',
+    marginTop: 20,
+    textAlign: 'center',
   },
 });

@@ -1,40 +1,45 @@
 // API Configuration File
-// This file centralizes all API endpoints and configuration using environment variables
+// This file centralizes all API endpoints and configuration using app.config.js
+
+import Constants from 'expo-constants';
+
+// Get configuration from app.config.js
+const apiConfig = Constants.expoConfig?.extra?.apiConfig || {};
 
 export const API_CONFIG = {
   // Base URL
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://ghdev.seedandbeyond.com:50000',
-  API_VERSION: process.env.EXPO_PUBLIC_API_VERSION || '/b1s/v1',
+  BASE_URL: apiConfig.baseUrl || 'https://ghdev.seedandbeyond.com:50000',
+  API_VERSION: apiConfig.apiVersion || '/b1s/v1',
   
   // Company Configuration
-  COMPANY_DB: process.env.EXPO_PUBLIC_COMPANY_DB || '__QAS',
+  COMPANY_DB: apiConfig.companyDb || '__QAS',
   
   // Authentication Endpoints
-  LOGIN: process.env.EXPO_PUBLIC_LOGIN_ENDPOINT || '/Login',
-  USERS_SERVICE_GET_CURRENT_USER: process.env.EXPO_PUBLIC_USERS_SERVICE_ENDPOINT || '/UsersService_GetCurrentUser',
+  LOGIN: apiConfig.login || '/Login',
+  USERS_SERVICE_GET_CURRENT_USER: apiConfig.usersServiceGetCurrentUser || '/UsersService_GetCurrentUser',
   
   // Data Endpoints
-  CART_MASTER: process.env.EXPO_PUBLIC_CART_MASTER_ENDPOINT || '/U_CART_MASTER',
-  HANGER: process.env.EXPO_PUBLIC_HANGER_ENDPOINT || '/U_HANGER',
-  BIN_LOCATIONS: process.env.EXPO_PUBLIC_BIN_LOCATIONS_ENDPOINT || '/BinLocations',
-  ITEMS: process.env.EXPO_PUBLIC_ITEMS_ENDPOINT || '/Items',
-  IMMATURE_PLANNER: process.env.EXPO_PUBLIC_IMMATURE_PLANNER_ENDPOINT || '/sml.svc/CV_IMMATURE_PLANNER_VW',
-  BATCH_NUMBER_DETAILS: process.env.EXPO_PUBLIC_BATCH_NUMBER_DETAILS_ENDPOINT || '/BatchNumberDetails',
-  NPFET: process.env.EXPO_PUBLIC_NPFET_ENDPOINT || '/NPFET',
-  NPFETLINES: process.env.EXPO_PUBLIC_NPFETLINES_ENDPOINT || '/NPFETLINES',
-  BATCH_SERVICE: process.env.EXPO_PUBLIC_BATCH_SERVICE_ENDPOINT || '/$batch',
-  NBNLG: process.env.EXPO_PUBLIC_NBNLG_ENDPOINT || '/NBNLG',
+  CART_MASTER: apiConfig.cartMaster || '/U_CART_MASTER',
+  HANGER: apiConfig.hanger || '/U_HANGER',
+  BIN_LOCATIONS: apiConfig.binLocations || '/BinLocations',
+  ITEMS: apiConfig.items || '/Items',
+  IMMATURE_PLANNER: apiConfig.immaturePlanner || '/sml.svc/CV_IMMATURE_PLANNER_VW',
+  BATCH_NUMBER_DETAILS: apiConfig.batchNumberDetails || '/BatchNumberDetails',
+  NPFET: apiConfig.npfet || '/NPFET',
+  NPFETLINES: apiConfig.npfetlines || '/NPFETLINES',
+  BATCH_SERVICE: apiConfig.batchService || '/$batch',
+  NBNLG: apiConfig.nbnlg || '/NBNLG',
   
   // App Configuration
-  APP_NAME: process.env.EXPO_PUBLIC_APP_NAME || 'SH',
-  APP_VERSION: process.env.EXPO_PUBLIC_APP_VERSION || '1.0.0',
+  APP_NAME: apiConfig.appName || 'SH',
+  APP_VERSION: apiConfig.appVersion || '1.0.2',
   
   // Timeout Configuration (in milliseconds)
-  API_TIMEOUT: parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT) || 30000,
-  BATCH_TIMEOUT: parseInt(process.env.EXPO_PUBLIC_BATCH_TIMEOUT) || 60000,
+  API_TIMEOUT: apiConfig.apiTimeout || 30000,
+  BATCH_TIMEOUT: apiConfig.batchTimeout || 60000,
   
   // Batch Processing
-  BATCH_SIZE: parseInt(process.env.EXPO_PUBLIC_BATCH_SIZE) || 200,
+  BATCH_SIZE: apiConfig.batchSize || 200,
 };
 
 // Helper function to build full API URLs
