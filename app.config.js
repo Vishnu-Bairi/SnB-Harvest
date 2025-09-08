@@ -1,16 +1,22 @@
 export default {
   expo: {
-    name: "SnB Harvest",
-    slug: "SnB Harvest",
-    version: "1.0.2",
+    name: "Harvest",
+    slug: "SnB-Harvest",
+    version: "1.0.7",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
     splash: {
       image: "./assets/images/splash-icon.png",
-      resizeMode: "cover",
-      backgroundColor: "transparent"
+      resizeMode: "contain",
+      backgroundColor: "#ffffff"
+    },
+    updates: {
+      url: "https://u.expo.dev/f4ac27b7-e9ff-4f7f-9bd9-b0e79883c802"
+    },
+    runtimeVersion: {
+      policy: "appVersion"
     },
     ios: {
       supportsTablet: true,
@@ -22,7 +28,7 @@ export default {
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
-        backgroundColor: "transparent"
+        backgroundColor: "#000000"
       },
       edgeToEdgeEnabled: true,
       package: "com.seedandbeyond.Harvest"
@@ -58,7 +64,7 @@ export default {
         
         // App Configuration
         appName: 'SH',
-        appVersion: '1.0.2',
+        appVersion: '1.0.7',
         
         // Timeout Configuration (in milliseconds)
         apiTimeout: 30000,

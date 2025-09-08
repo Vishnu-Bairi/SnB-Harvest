@@ -1,6 +1,6 @@
 {
   "name": "snb-harvest",
-  "version": "1.0.2",
+  "version": "1.0.7",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
@@ -17,10 +17,12 @@
     "expo": "~53.0.20",
     "expo-linear-gradient": "^14.1.5",
     "expo-status-bar": "~2.2.3",
+    "expo-updates": "~0.28.17",
     "react": "19.0.0",
     "react-native": "0.79.5",
     "react-native-dotenv": "^3.4.11",
     "react-native-gesture-handler": "^2.28.0",
+    "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-safe-area-context": "^5.6.0",
     "react-native-screens": "^4.14.1"
   },

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_URLS, COMPANY_CONFIG, APP_CONFIG } from '../config/api';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -23,17 +24,31 @@ export default function HomeScreen({ navigation }) {
 
   // Add ref for metrc tag input
   const metrcTagInputRef = useRef(null);
-  
+
   // Add refs for focus management
   const locationRef = useRef(null);
   const cartRef = useRef(null);
   const hangerRef = useRef(null);
+  const numberOfHangersRef = useRef(null);
   const numberOfPlantsRef = useRef(null);
+  const harvestNameDetailsRef = useRef(null);
   const grossWeightRef = useRef(null);
-  
+
+
   // Add state for cart and hanger input validation
   const [cartInputText, setCartInputText] = useState('');
   const [hangerInputText, setHangerInputText] = useState('');
+
+  // Add refs for handling scanner input delays
+  const cartSubmitTimeoutRef = useRef(null);
+  const hangerSubmitTimeoutRef = useRef(null);
+  const harvestSubmitTimeoutRef = useRef(null);
+
+  // Add refs to store current input values for scanner handling
+  const currentMetrcTagRef = useRef('');
+  const currentCartInputRef = useRef('');
+  const currentHangerInputRef = useRef('');
+
 
   // Loading state for harvest details fetch
   const [isLoadingHarvestDetails, setIsLoadingHarvestDetails] = useState(false);
@@ -81,17 +96,23 @@ export default function HomeScreen({ navigation }) {
     if (tagDetails && tagDetails.numberOfHangers && tagDetails.individualHangerWeight) {
       const numberOfHangers = parseFloat(tagDetails.numberOfHangers);
       const individualWeight = parseFloat(tagDetails.individualHangerWeight);
-      
+
       // Only calculate if both values are valid numbers
       if (!isNaN(numberOfHangers) && !isNaN(individualWeight) && numberOfHangers > 0 && individualWeight > 0) {
         const totalWeight = numberOfHangers * individualWeight;
-        
+
         // Update the hanger weight field with the calculated total
         setTagDetails(prev => ({
           ...prev,
           hangerWeight: totalWeight.toFixed(2) // Round to 2 decimal places
         }));
       }
+    } else if (tagDetails && (!tagDetails.hangerType || tagDetails.hangerType === '')) {
+      // If no hanger type is provided, set hanger weight to 0
+      setTagDetails(prev => ({
+        ...prev,
+        hangerWeight: '0.00'
+      }));
     } else if (tagDetails && tagDetails.hangerWeight && (!tagDetails.numberOfHangers || parseFloat(tagDetails.numberOfHangers) <= 0)) {
       // Clear hanger weight if number of hangers is invalid
       setTagDetails(prev => ({
@@ -99,7 +120,7 @@ export default function HomeScreen({ navigation }) {
         hangerWeight: ''
       }));
     }
-  }, [tagDetails?.numberOfHangers, tagDetails?.individualHangerWeight]);
+  }, [tagDetails?.numberOfHangers, tagDetails?.individualHangerWeight, tagDetails?.hangerType]);
 
   // Auto-calculate net weight when gross weight, hanger weight, or cart weight changes
   useEffect(() => {
@@ -107,7 +128,7 @@ export default function HomeScreen({ navigation }) {
       const grossWeight = parseFloat(tagDetails.grossWeight) || 0;
       const hangerWeight = parseFloat(tagDetails.hangerWeight) || 0;
       const cartWeight = parseFloat(tagDetails.cartWeight) || 0;
-      
+
       // If gross weight is empty or 0, clear net weight
       if (!tagDetails.grossWeight || grossWeight <= 0) {
         if (tagDetails.netWeight && tagDetails.netWeight !== '') {
@@ -118,10 +139,10 @@ export default function HomeScreen({ navigation }) {
         }
         return;
       }
-      
+
       // Calculate net weight: Gross Weight - Hanger Weight - Cart Weight
       const netWeight = grossWeight - hangerWeight - cartWeight;
-      
+
       // Only update if the calculated value is different from current value
       if (tagDetails.netWeight !== netWeight.toFixed(2)) {
         setTagDetails(prev => ({
@@ -143,9 +164,24 @@ export default function HomeScreen({ navigation }) {
           setTimeout(() => attemptFocus(attempt + 1), 200 * attempt);
         }
       };
-      
+
       setTimeout(() => attemptFocus(), 500);
     }
+  }, []);
+
+  // Cleanup timeouts on component unmount
+  useEffect(() => {
+    return () => {
+      if (cartSubmitTimeoutRef.current) {
+        clearTimeout(cartSubmitTimeoutRef.current);
+      }
+      if (hangerSubmitTimeoutRef.current) {
+        clearTimeout(hangerSubmitTimeoutRef.current);
+      }
+      if (harvestSubmitTimeoutRef.current) {
+        clearTimeout(harvestSubmitTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Focus management after form is loaded
@@ -215,7 +251,7 @@ export default function HomeScreen({ navigation }) {
           immaturePlanner2: [],
           immaturePlanner: null
         };
-        
+
         // console.log('Initial apiData structure (cart master & hanger):', newData);
         return newData;
       });
@@ -225,7 +261,7 @@ export default function HomeScreen({ navigation }) {
 
     } catch (error) {
       console.error('Error fetching data:', error);
-      showCustomAlertMessage('Error', 'Failed to fetch data from server', 'error');
+      showAlertDialogMessage('Error', 'Failed to fetch data from server', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -260,10 +296,10 @@ export default function HomeScreen({ navigation }) {
       }
 
       const data = await response.json();
-      
+
       if (!data.value || data.value.length === 0) {
         // Clear both location and harvest name fields when no records found
-        setLocationInput('');
+        // setLocationInput('');
         setMetrcTag('');
         showAlertDialogMessage('No Records Found', 'No records found for this harvest name and location combination. Please verify the harvest name and location and try again.', 'warning');
         return;
@@ -273,7 +309,7 @@ export default function HomeScreen({ navigation }) {
       const mnfSerial = data.value[0].MnfSerial;
       const binLocationCode = data.value[0].BinLocationCode;
       const metricLicense = data.value[0].U_MetrcLicense;
-      
+
       if (!mnfSerial) {
         showAlertDialogMessage('Data Error', 'No MnfSerial found in the record. Please contact support.', 'error');
         return;
@@ -316,7 +352,7 @@ export default function HomeScreen({ navigation }) {
           immaturePlanner2: data.value || [],
           immaturePlanner: data.value[0]
         };
-        
+
         return newData;
       });
 
@@ -324,8 +360,8 @@ export default function HomeScreen({ navigation }) {
       setFilteredLocations(binLocationsData.value || []);
 
       // Get the initial location from response
-      const initialLocation = data.value && data.value.length > 0 
-        ? data.value[0].BinLocationCode 
+      const initialLocation = data.value && data.value.length > 0
+        ? data.value[0].BinLocationCode
         : '';
 
       // Initialize form fields with the entered harvest name and fetched data
@@ -338,14 +374,14 @@ export default function HomeScreen({ navigation }) {
         cart: '',
         cartWeight: '',
         hangerType: '',
-        numberOfHangers: '18', // Set default to 18
+        numberOfHangers: '18', // Set default to 18, user can change
         individualHangerWeight: '',
-        hangerWeight: '',
+        hangerWeight: '0.00', // Set default to 0.00
         grossWeight: '',
         netWeight: '',
         location: initialLocation || metricLicense || ''
       });
-      
+
       // Initialize input text values
       setCartInputText('');
       setHangerInputText('');
@@ -370,7 +406,7 @@ export default function HomeScreen({ navigation }) {
       // Clear all stored authentication data
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('username');
-      
+
       // Reset local state
       setAuthToken(null);
       setTagDetails(null);
@@ -386,7 +422,7 @@ export default function HomeScreen({ navigation }) {
         hanger: [],
         binLocations: []
       });
-      
+
       // Navigate to login
       navigation.replace('Login');
     } catch (error) {
@@ -408,25 +444,25 @@ export default function HomeScreen({ navigation }) {
   const validateNumberOfPlants = (text) => {
     const numberOfPlants = parseFloat(text) || 0;
     const availablePlants = parseFloat(tagDetails?.availablePlants) || 0;
-    
+
     // Allow empty string for clearing
     if (text === '') {
       updateField('numberOfPlants', text);
       return;
     }
-    
+
     // Check if it's a valid number
     if (isNaN(numberOfPlants) || numberOfPlants < 0) {
       return; // Don't update if invalid
     }
-    
+
     // Check if it exceeds available plants
     if (numberOfPlants > availablePlants) {
       // Still allow the input but it will show as error
       updateField('numberOfPlants', text);
       return;
     }
-    
+
     // Valid input
     updateField('numberOfPlants', text);
   };
@@ -442,7 +478,7 @@ export default function HomeScreen({ navigation }) {
   const validateGrossWeight = (text) => {
     // Remove all non-numeric characters except decimal point
     let cleanedText = text.replace(/[^0-9.]/g, '');
-    
+
     // Handle multiple decimal points - keep only the first one
     const decimalIndex = cleanedText.indexOf('.');
     if (decimalIndex !== -1) {
@@ -452,22 +488,22 @@ export default function HomeScreen({ navigation }) {
       const limitedAfterDecimal = afterDecimal.substring(0, 2);
       cleanedText = beforeDecimal + '.' + limitedAfterDecimal;
     }
-    
+
     // Handle leading zeros (e.g., "00.5" becomes "0.5")
     if (cleanedText.length > 1 && cleanedText[0] === '0' && cleanedText[1] !== '.') {
       cleanedText = cleanedText.replace(/^0+/, '0');
     }
-    
+
     // Handle case where user enters just a decimal point
     if (cleanedText === '.') {
       cleanedText = '0.';
     }
-    
+
     // Handle case where user enters multiple leading zeros followed by decimal
     if (cleanedText.match(/^0+\./)) {
       cleanedText = '0' + cleanedText.substring(cleanedText.indexOf('.'));
     }
-    
+
     // Update the field with cleaned value
     updateField('grossWeight', cleanedText);
   };
@@ -475,12 +511,18 @@ export default function HomeScreen({ navigation }) {
   // Handle cart input text change (just update the text, no validation)
   const handleCartInputChange = (text) => {
     setCartInputText(text);
+    currentCartInputRef.current = text; // Store current value for scanner handling
+
+    // Clear any existing timeout when text changes (scanner is still inputting)
+    if (cartSubmitTimeoutRef.current) {
+      clearTimeout(cartSubmitTimeoutRef.current);
+    }
   };
 
   // Validate cart input when user presses Enter
   const validateCartInput = () => {
-    const text = cartInputText.trim();
-    
+    const text = currentCartInputRef.current.trim();
+
     if (!text) {
       // Clear cart data if input is empty
       setTagDetails(prev => ({
@@ -492,20 +534,22 @@ export default function HomeScreen({ navigation }) {
     }
 
     // Find matching cart in the data
-    const matchingCart = apiData.cartMaster.find(cart => 
+    const matchingCart = apiData.cartMaster.find(cart =>
       cart.Name && cart.Name.toLowerCase() === text.toLowerCase()
     );
 
     if (matchingCart) {
       // Valid cart found
+      // console.log('Matching cart found:', matchingCart);
       const weight = getPropertyValue(matchingCart, ['U_Weight', 'u_weight', 'weight', 'Weight', 'U_WEIGHT']);
-      
+      // console.log('Extracted cart weight:', weight);
+
       setTagDetails(prev => ({
         ...prev,
         cart: matchingCart.Name,
         cartWeight: weight ? weight.toString() : ''
       }));
-      
+
       // Focus on hanger after successful cart validation
       setTimeout(() => {
         if (hangerRef.current) {
@@ -515,14 +559,14 @@ export default function HomeScreen({ navigation }) {
     } else {
       // Invalid cart - show popup but don't move focus
       showAlertDialogMessage('Invalid Cart', `Cart "${text}" not found. Please enter a valid cart name.`, 'warning');
-      
+
       // Clear cart data
       setTagDetails(prev => ({
         ...prev,
         cart: '',
         cartWeight: ''
       }));
-      
+
       // Keep focus on cart input so user can correct it
       setTimeout(() => {
         if (cartRef.current) {
@@ -534,40 +578,67 @@ export default function HomeScreen({ navigation }) {
 
   // Handle hanger input text change (just update the text, no validation)
   const handleHangerInputChange = (text) => {
+    // console.log('Hanger input changed:', text);
     setHangerInputText(text);
+    currentHangerInputRef.current = text; // Store current value for scanner handling
+
+    // Clear any existing timeout when text changes (scanner is still inputting)
+    if (hangerSubmitTimeoutRef.current) {
+      // console.log('Clearing existing hanger timeout');
+      clearTimeout(hangerSubmitTimeoutRef.current);
+    }
   };
 
   // Validate hanger input when user presses Enter
   const validateHangerInput = () => {
-    const text = hangerInputText.trim();
-    
+    const text = currentHangerInputRef.current.trim();
+    // console.log('Validating hanger input:', text);
+    // console.log('Available hangers:', apiData.hanger?.map(h => h.Name));
+
     if (!text) {
-      // Clear hanger data if input is empty
+      // console.log('Empty hanger input, showing validation error');
+      // Show validation error for empty hanger input
+      showAlertDialogMessage('Required Field', 'Please enter a hanger type', 'warning');
+      
+      // Clear hanger data
       setTagDetails(prev => ({
         ...prev,
         hangerType: '',
         individualHangerWeight: '',
-        hangerWeight: ''
+        hangerWeight: '',
+        numberOfHangers: prev.numberOfHangers || '18' // Keep existing value or default to 18
       }));
+      
+      // Keep focus on hanger input so user can correct it
+      setTimeout(() => {
+        if (hangerRef.current) {
+          hangerRef.current.focus();
+        }
+      }, 100);
       return;
     }
 
     // Find matching hanger in the data
-    const matchingHanger = apiData.hanger.find(hanger => 
+    const matchingHanger = apiData.hanger.find(hanger =>
       hanger.Name && hanger.Name.toLowerCase() === text.toLowerCase()
     );
+
+    // console.log('Matching hanger found:', matchingHanger);
 
     if (matchingHanger) {
       // Valid hanger found
       const weight = getPropertyValue(matchingHanger, ['U_Weight', 'u_weight', 'weight', 'Weight', 'U_WEIGHT']);
-      
+      // console.log('Hanger weight found:', weight);
+
       setTagDetails(prev => ({
         ...prev,
         hangerType: matchingHanger.Name,
         individualHangerWeight: weight ? weight.toString() : '',
-        hangerWeight: prev.hangerType === matchingHanger.Name ? prev.hangerWeight : '' // Only clear if hanger type changed
+        hangerWeight: prev.hangerType === matchingHanger.Name ? prev.hangerWeight : '', // Only clear if hanger type changed
+        numberOfHangers: prev.numberOfHangers || '18' // Keep existing value or default to 18
       }));
-      
+
+      // console.log('Hanger validation successful, focusing on number of plants');
       // Focus on number of plants after successful hanger validation
       setTimeout(() => {
         if (numberOfPlantsRef.current) {
@@ -576,8 +647,9 @@ export default function HomeScreen({ navigation }) {
       }, 100);
     } else {
       // Invalid hanger - show popup but don't move focus
+      // console.log('Invalid hanger, showing alert');
       showAlertDialogMessage('Invalid Hanger', `Hanger "${text}" not found. Please enter a valid hanger name.`, 'warning');
-      
+
       // Clear hanger data
       setTagDetails(prev => ({
         ...prev,
@@ -585,7 +657,7 @@ export default function HomeScreen({ navigation }) {
         individualHangerWeight: '',
         hangerWeight: ''
       }));
-      
+
       // Keep focus on hanger input so user can correct it
       setTimeout(() => {
         if (hangerRef.current) {
@@ -598,7 +670,7 @@ export default function HomeScreen({ navigation }) {
   // Helper function to safely access nested properties
   const getPropertyValue = (obj, possibleNames) => {
     if (!obj) return null;
-    
+
     for (const name of possibleNames) {
       if (obj[name] !== undefined && obj[name] !== null) {
         return obj[name];
@@ -607,13 +679,31 @@ export default function HomeScreen({ navigation }) {
     return null;
   };
 
+
+  // Helper function to handle delayed submission for scanner inputs
+  const handleDelayedSubmit = (timeoutRef, submitFunction, delay = APP_CONFIG.SCANNER_DELAY) => {
+    // console.log('handleDelayedSubmit called with delay:', delay);
+    
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      // console.log('Clearing existing timeout');
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Set a new timeout to allow scanner input to complete
+    timeoutRef.current = setTimeout(() => {
+      // console.log('Timeout completed, calling submit function');
+      submitFunction();
+    }, delay);
+  };
+
   // Location dropdown functions
   const handleLocationSearch = (text) => {
     setLocationSearchText(text);
     if (text.trim() === '') {
       setFilteredLocations(apiData.binLocations);
     } else {
-      const filtered = apiData.binLocations.filter(location => 
+      const filtered = apiData.binLocations.filter(location =>
         location.BinCode && location.BinCode.toLowerCase().includes(text.toLowerCase())
       );
       setFilteredLocations(filtered);
@@ -639,41 +729,44 @@ export default function HomeScreen({ navigation }) {
       // Validate number of plants
       const numberOfPlants = parseFloat(tagDetails.numberOfPlants) || 0;
       const availablePlants = parseFloat(tagDetails.availablePlants) || 0;
-      
+
       if (numberOfPlants > availablePlants) {
-        showCustomAlertMessage('Validation Error', `Number of plants (${numberOfPlants}) cannot exceed available plants (${availablePlants})`, 'warning');
+        showAlertDialogMessage('Validation Error', `Number of plants (${numberOfPlants}) cannot exceed available plants (${availablePlants})`, 'warning');
         return;
       }
-      
+
       if (numberOfPlants <= 0) {
-        showCustomAlertMessage('Validation Error', 'Number of plants must be greater than 0', 'warning');
+        showAlertDialogMessage('Validation Error', 'Number of plants must be greater than 0', 'warning');
         return;
       }
 
       // Validate all required fields (same as SAP UI5 validation)
       if (tagDetails.numberOfPlants === "") {
-        showCustomAlertMessage('Required Field', 'Please enter No. of Plants', 'warning');
+        showAlertDialogMessage('Required Field', 'Please enter No. of Plants', 'warning');
         return;
-              } else if (tagDetails.harvestName === "") {
-          showCustomAlertMessage('Required Field', 'Please enter Harvest Name', 'warning');
+      } else if (tagDetails.harvestName === "") {
+        showAlertDialogMessage('Required Field', 'Please enter Harvest Name', 'warning');
         return;
-              } else if (tagDetails.cart === "") {
-          showCustomAlertMessage('Required Field', 'Please Select Cart', 'warning');
+      } else if (tagDetails.cart === "") {
+        showAlertDialogMessage('Required Field', 'Please Select Cart', 'warning');
         return;
-              } else if (tagDetails.hangerWeight === "") {
-          showCustomAlertMessage('Required Field', 'Please Select Hanger Weight', 'warning');
+      } else if (tagDetails.hangerType === "") {
+        showAlertDialogMessage('Required Field', 'Please Select Hanger Type', 'warning');
         return;
-              } else if (tagDetails.numberOfHangers === "" || parseFloat(tagDetails.numberOfHangers) <= 0) {
-          showCustomAlertMessage('Required Field', 'Please enter Number of Hangers greater than 0', 'warning');
+      } else if (tagDetails.hangerType && tagDetails.hangerType !== "" && tagDetails.hangerWeight === "") {
+        showAlertDialogMessage('Required Field', 'Please Select Hanger Weight', 'warning');
         return;
-              } else if (tagDetails.grossWeight === "" || parseFloat(tagDetails.grossWeight) <= 0) {
-          showCustomAlertMessage('Required Field', 'Please enter gross weight greater than 0', 'warning');
+      } else if (tagDetails.numberOfHangers === "" || parseFloat(tagDetails.numberOfHangers) <= 0) {
+        showAlertDialogMessage('Required Field', 'Please enter Number of Hangers greater than 0', 'warning');
         return;
-              } else if (tagDetails.location === "") {
-          showCustomAlertMessage('Required Field', 'Please Select Drying Location', 'warning');
+      } else if (tagDetails.grossWeight === "" || parseFloat(tagDetails.grossWeight) <= 0) {
+        showAlertDialogMessage('Required Field', 'Please enter gross weight greater than 0', 'warning');
         return;
-              } else if (parseFloat(tagDetails.netWeight) <= 0) {
-          showCustomAlertMessage('Required Field', 'Net weight must be greater than 0', 'warning');
+      } else if (tagDetails.location === "") {
+        showAlertDialogMessage('Required Field', 'Please Select Drying Location', 'warning');
+        return;
+      } else if (parseFloat(tagDetails.netWeight) <= 0) {
+        showAlertDialogMessage('Required Field', 'Net weight must be greater than 0', 'warning');
         return;
       }
 
@@ -682,17 +775,17 @@ export default function HomeScreen({ navigation }) {
       // Find the selected location from binLocations
       // console.log("Looking for location with BinCode:", tagDetails.location);
       // console.log("Available binLocations:", apiData.binLocations);
-      
+
       const selectedLocation = apiData.binLocations.find(location => {
         console.log("Checking location:", location.BinCode, "against:", tagDetails.location, "Match:", location.BinCode === tagDetails.location);
         return location.BinCode === tagDetails.location;
       });
-      
+
       setSelectedLocationValue(selectedLocation);
       // console.log("selectedLocation", selectedLocation);
       // console.log("tagDetails.location", tagDetails.location);
       // console.log("apiData.binLocations", apiData.binLocations);
-      
+
       // Validate that we found a matching location
       if (!selectedLocation) {
         Alert.alert('Error', `No matching location found for: ${tagDetails.location}. Please check the location selection.`);
@@ -700,15 +793,15 @@ export default function HomeScreen({ navigation }) {
         return;
       }
 
-      
+
 
       try {
         // Log all the details being submitted
         console.log('Submitting harvest details:', tagDetails);
-        
+
         // Get current date in UTC format
         const currentDate = new Date().toISOString();
-        
+
         // First API call: Check if harvest record exists (NPFET)
         const checkHarvestResponse = await fetch(`${API_URLS.NPFET}?$filter=U_NLFID eq '${apiData.binLocations && apiData.binLocations.length > 0 ? apiData.binLocations[0].U_MetrcLicense : tagDetails.location}' and U_NHBID eq '${tagDetails.harvestName}' and U_IsHarvested eq 'Yes'`, {
           method: 'GET',
@@ -728,7 +821,7 @@ export default function HomeScreen({ navigation }) {
         // Check if first API response is empty
         if (!checkHarvestData.value || checkHarvestData.value.length === 0) {
           console.log('First API response is empty, creating harvest record...');
-          
+
           // Create harvest payload based on SAP UI5 structure
           const harvestPayload = {
             U_NHOWT: parseFloat(tagDetails.netWeight).toFixed(2), // total weight
@@ -748,9 +841,9 @@ export default function HomeScreen({ navigation }) {
             U_NGRHWT: Number(tagDetails.grossWeight).toFixed(2), // gross weight
             U_NCTTP: tagDetails.cart, // cart type
             U_NCTWT: Number(tagDetails.cartWeight).toFixed(2), // cart weight
-            U_NHNTP: tagDetails.hangerType, // hanger type
-            U_NHNWT: Number(tagDetails.hangerWeight).toFixed(2), // hanger weight
-            U_NNOHN: Number(tagDetails.numberOfHangers) // number of hangers
+            U_NHNTP: tagDetails.hangerType || '', // hanger type (empty if not provided)
+            U_NHNWT: Number(tagDetails.hangerWeight || 0).toFixed(2), // hanger weight (0 if not provided)
+            U_NNOHN: Number(tagDetails.numberOfHangers || 0) // number of hangers (18 if not provided)
           };
 
           // console.log('Harvest payload:', harvestPayload);
@@ -762,7 +855,7 @@ export default function HomeScreen({ navigation }) {
           const batchUrl = [];
           const batchCallLines = [];
           batchCallLines.push(JSON.parse(JSON.stringify(harvestPayload))); // structuredClone equivalent
-          
+
           // Push NPFETLINES to batchUrl
           batchUrl.push({
             entity: "/b1s/v1/NPFETLINES",
@@ -789,7 +882,7 @@ export default function HomeScreen({ navigation }) {
           const checkNPFETAgainData = await checkNPFETAgainResponse.json();
           console.log('Second NPFET check response:', checkNPFETAgainData);
           // Delete some properties from payload for update
-          var harvestPayload2=JSON.parse(JSON.stringify(harvestPayload));
+          var harvestPayload2 = JSON.parse(JSON.stringify(harvestPayload));
           delete harvestPayload2.U_NCTTP; // cart type
           delete harvestPayload2.U_NCTWT; // cart weight
           delete harvestPayload2.U_NHNTP; // hanger type
@@ -797,16 +890,16 @@ export default function HomeScreen({ navigation }) {
           delete harvestPayload2.U_NNOHN; // number of hangers
 
           if (checkNPFETAgainData.value && checkNPFETAgainData.value.length > 0) {
-          
+
             const existingRecord = checkNPFETAgainData.value[0];
-            
+
             // Check if existing record is in same location
             if (existingRecord.U_WHSCODE === tagDetails.location) {
               console.log('Updating existing record in same location...');
 
               console.log('Existing record:', existingRecord);
               console.log('Harvest payload2:', harvestPayload2);
-              
+
               // Update quantities
               harvestPayload2.U_NPQTY = Number(harvestPayload2.U_NPQTY) + Number(existingRecord.U_NPQTY || 0);
               harvestPayload2.U_NGRHWT = Number(harvestPayload2.U_NGRHWT) + Number(existingRecord.U_NGRHWT || 0);
@@ -825,7 +918,7 @@ export default function HomeScreen({ navigation }) {
               });
 
               console.log('Update API response status:', updateResponse.status);
-              
+
               // Parse response for logging
               let logResponse;
               if (updateResponse.ok) {
@@ -856,13 +949,13 @@ export default function HomeScreen({ navigation }) {
               };
               captureLog(logData);
 
-                          // Check if update operation was successful - only proceed with batch if successful
-            if (!updateResponse.ok) {
-              displayErrorMessage('Update Failed', 'Failed to update harvest record. Please try again.');
-              console.error('Update NPFET failed:', updateResponse);
-              setIsSubmitting(false);
-              return;
-            }
+              // Check if update operation was successful - only proceed with batch if successful
+              if (!updateResponse.ok) {
+                displayErrorMessage('Update Failed', 'Failed to update harvest record. Please try again.');
+                console.error('Update NPFET failed:', updateResponse);
+                setIsSubmitting(false);
+                return;
+              }
 
               console.log('Update NPFET successful, proceeding with batch operations...');
 
@@ -886,18 +979,18 @@ export default function HomeScreen({ navigation }) {
               function captureLog(logData) {
                 fetch(API_URLS.NBNLG, {
                   method: 'POST',
-                  headers: { 'Authorization':`Basic ${authToken}` },
+                  headers: { 'Authorization': `Basic ${authToken}` },
                   body: JSON.stringify(logData)
                 })
-                .then(response => response.json())
-                .then(data => console.log('Log response:', data))
-                .catch(console.error);
+                  .then(response => response.json())
+                  .then(data => console.log('Log response:', data))
+                  .catch(console.error);
               }
-              
+
               async function callBatchService(batchUrl, callBack) {
                 var reqHeader = `--clone_batch--\r\nContent-Type:application/http  \r\nContent-Transfer-Encoding:binary\r\n \r\n`;
                 var payLoad = reqHeader;
-                
+
                 batchUrl.forEach((sObj, i) => {
                   payLoad = payLoad + sObj.method + " " + sObj.entity + `\r\n \r\n`;
                   payLoad = payLoad + JSON.stringify(sObj.data) + `\r\n \r\n`;
@@ -907,7 +1000,7 @@ export default function HomeScreen({ navigation }) {
                     payLoad = payLoad + reqHeader;
                   }
                 });
-                
+
                 try {
                   const response = await fetch(API_URLS.BATCH_SERVICE, {
                     method: 'POST',
@@ -918,19 +1011,19 @@ export default function HomeScreen({ navigation }) {
                     body: payLoad
                   });
                   const text = await response.text();
-              
+
                   const logData = {
-                    U_NDTTM:currentDate,
-                    U_NUSID:username,
-                    U_NLGMT:"POST",
-                    U_NLURL:"Batch calls",
-                    U_NLGBD:payLoad,
-                    U_NLGRP:text.includes("error") ? text.split("message")[2] || "Unknown error" : "",
-                    U_NLGST:response.ok ? 200 : 400,
+                    U_NDTTM: currentDate,
+                    U_NUSID: username,
+                    U_NLGMT: "POST",
+                    U_NLURL: "Batch calls",
+                    U_NLGBD: payLoad,
+                    U_NLGRP: text.includes("error") ? text.split("message")[2] || "Unknown error" : "",
+                    U_NLGST: response.ok ? 200 : 400,
                     U_NAPP: APP_CONFIG.NAME
                   };
                   captureLog(logData);
-              
+
                   if (text.includes("error")) {
                     // Extract error message more reliably
                     let errorMessage = "Batch operation failed";
@@ -969,7 +1062,7 @@ export default function HomeScreen({ navigation }) {
                     const startIndex = i * batchSize;
                     const endIndex = Math.min(startIndex + batchSize, batchUrl.length);
                     const currentBatch = batchUrl.slice(startIndex, endIndex);
-                    
+
                     await new Promise((resolve) => {
                       callBatchService(currentBatch, (result) => {
                         if (result.success) {
@@ -1005,18 +1098,18 @@ export default function HomeScreen({ navigation }) {
               console.log('Calling batch API with URLs:', batchUrl);
               setIsBatchProcessing(true);
               setBatchErrors([]);
-              
+
               const batchResult = await createBatchCall(batchUrl, (result) => {
                 console.log('Batch processing completed:', result);
-                
+
                 if (result.success) {
-                  displaySuccessMessage(`Successfully updated harvest record and processed ${result.totalProcessed} batch operations.`);
+                  displaySuccessMessage(`Successfully harvested ${tagDetails.numberOfPlants} plants for harvest name ${tagDetails.harvestName}.`);
                   clearHarvestData(); // Clear form data after successful submission
                 } else {
-                  const errorMessage = result.errors && result.errors.length > 0 
+                  const errorMessage = result.errors && result.errors.length > 0
                     ? `Batch processing completed with ${result.errorCount} errors:\n\n${result.errors.join('\n')}`
                     : `Batch processing failed: ${result.error || 'Unknown error'}`;
-                  
+
                   displayErrorMessage('Batch Processing Errors', errorMessage);
                   setBatchErrors(result.errors || [result.error]);
                 }
@@ -1034,7 +1127,7 @@ export default function HomeScreen({ navigation }) {
           } else {
             console.log('No existing record found, creating new one...');
             console.log('Harvest payload2:', harvestPayload2);
-            
+
             // POST to NPFET
             const createResponse = await fetch(API_URLS.NPFET, {
               method: 'POST',
@@ -1045,10 +1138,10 @@ export default function HomeScreen({ navigation }) {
               body: JSON.stringify(harvestPayload2)
             });
 
-            
+
 
             console.log('Create NPFET response status:', createResponse.status);
-            
+
             // Log the create operation
             let createLogResponse;
             if (createResponse.ok) {
@@ -1078,7 +1171,7 @@ export default function HomeScreen({ navigation }) {
               U_NAPP: APP_CONFIG.NAME
             };
             captureLog(createLogData);
-            
+
 
             // Check if create operation was successful
             if (!createResponse.ok) {
@@ -1103,42 +1196,42 @@ export default function HomeScreen({ navigation }) {
               }
             });
 
-         
-
-          // Call batch API with proper error handling
-          console.log('Calling batch API with URLs:', batchUrl);
-          setIsBatchProcessing(true);
-          setBatchErrors([]);
-          
-          const batchResult = await createBatchCall(batchUrl, (result) => {
-            console.log('Batch processing completed:', result);
-            
-            if (result.success) {
-              displaySuccessMessage(`Successfully processed ${result.totalProcessed} batch operations.`);
-              clearHarvestData(); // Clear form data after successful submission
-            } else {
-              const errorMessage = result.errors && result.errors.length > 0 
-                ? `Batch processing completed with ${result.errorCount} errors:\n\n${result.errors.join('\n')}`
-                : `Batch processing failed: ${result.error || 'Unknown error'}`;
-              
-              displayErrorMessage('Batch Processing Errors', errorMessage);
-              setBatchErrors(result.errors || [result.error]);
-            }
-          });
-
-          setIsBatchProcessing(false);
-          setIsSubmitting(false);
 
 
-        }
-               } else {
+            // Call batch API with proper error handling
+            console.log('Calling batch API with URLs:', batchUrl);
+            setIsBatchProcessing(true);
+            setBatchErrors([]);
+
+            const batchResult = await createBatchCall(batchUrl, (result) => {
+              console.log('Batch processing completed:', result);
+
+              if (result.success) {
+                displaySuccessMessage(`Successfully harvested ${tagDetails.numberOfPlants} plants for harvest name ${tagDetails.harvestName}.`);
+                clearHarvestData(); // Clear form data after successful submission
+              } else {
+                const errorMessage = result.errors && result.errors.length > 0
+                  ? `Batch processing completed with ${result.errorCount} errors:\n\n${result.errors.join('\n')}`
+                  : `Batch processing failed: ${result.error || 'Unknown error'}`;
+
+                displayErrorMessage('Batch Processing Errors', errorMessage);
+                setBatchErrors(result.errors || [result.error]);
+              }
+            });
+
+            setIsBatchProcessing(false);
+            setIsSubmitting(false);
+
+
+          }
+        } else {
           console.log('First API response is not empty, harvest batch already exists');
           displayErrorMessage('Harvest Batch Exists', 'The entered Harvest Batch already exists. Please enter a different Harvest Batch.');
         }
 
       } catch (error) {
         console.error('Submit error:', error);
-                    displayErrorMessage('Processing Error', `Failed to process harvest data: ${error.message}`);
+        displayErrorMessage('Processing Error', `Failed to process harvest data: ${error.message}`);
       } finally {
         setIsSubmitting(false);
       }
@@ -1146,6 +1239,17 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleCancel = () => {
+    // Clear any pending timeouts
+    if (cartSubmitTimeoutRef.current) {
+      clearTimeout(cartSubmitTimeoutRef.current);
+    }
+    if (hangerSubmitTimeoutRef.current) {
+      clearTimeout(hangerSubmitTimeoutRef.current);
+    }
+    if (harvestSubmitTimeoutRef.current) {
+      clearTimeout(harvestSubmitTimeoutRef.current);
+    }
+
     setMetrcTag('');
     setLocationInput('');
     setTagDetails(null);
@@ -1153,7 +1257,12 @@ export default function HomeScreen({ navigation }) {
     setHangerInputText('');
     setLocationSearchText('');
     setShowLocationDropdown(false);
-    
+
+    // Reset current input refs
+    currentMetrcTagRef.current = '';
+    currentCartInputRef.current = '';
+    currentHangerInputRef.current = '';
+
     // Focus the location input after cancel
     setTimeout(() => {
       if (locationRef.current) {
@@ -1164,6 +1273,17 @@ export default function HomeScreen({ navigation }) {
 
   // Clear harvest data after successful submission
   const clearHarvestData = () => {
+    // Clear any pending timeouts
+    if (cartSubmitTimeoutRef.current) {
+      clearTimeout(cartSubmitTimeoutRef.current);
+    }
+    if (hangerSubmitTimeoutRef.current) {
+      clearTimeout(hangerSubmitTimeoutRef.current);
+    }
+    if (harvestSubmitTimeoutRef.current) {
+      clearTimeout(harvestSubmitTimeoutRef.current);
+    }
+
     setMetrcTag('');
     setLocationInput('');
     setTagDetails(null);
@@ -1171,7 +1291,12 @@ export default function HomeScreen({ navigation }) {
     setHangerInputText('');
     setLocationSearchText('');
     setShowLocationDropdown(false);
-    
+
+    // Reset current input refs
+    currentMetrcTagRef.current = '';
+    currentCartInputRef.current = '';
+    currentHangerInputRef.current = '';
+
     // Focus the location input after successful harvest
     setTimeout(() => {
       if (locationRef.current) {
@@ -1212,7 +1337,7 @@ export default function HomeScreen({ navigation }) {
   // Close alert dialog
   const closeAlertDialog = () => {
     setShowAlertDialog(false);
-    
+
     // Clear input fields if the alert was for invalid cart or hanger
     if (alertTitle === 'Invalid Cart') {
       setCartInputText('');
@@ -1271,7 +1396,15 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <ScrollView style={styles.content}>
+      <KeyboardAwareScrollView
+        style={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
+        contentInsetAdjustmentBehavior="automatic"
+        extraScrollHeight={180}
+        enableOnAndroid={true}
+
+      >
 
 
 
@@ -1282,7 +1415,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.batchStatusText}>Processing batch operations...</Text>
           </View>
         )}
-        
+
         {batchErrors.length > 0 && (
           <View style={styles.batchErrorContainer}>
             <Text style={styles.batchErrorTitle}>Batch Processing Errors</Text>
@@ -1291,7 +1424,7 @@ export default function HomeScreen({ navigation }) {
                 • {error}
               </Text>
             ))}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.clearErrorsButton}
               onPress={() => setBatchErrors([])}
             >
@@ -1303,7 +1436,7 @@ export default function HomeScreen({ navigation }) {
         {/* Harvest Name Input Section */}
         <View style={styles.inputSection}>
           <Text style={styles.harvestTitle}>Harvest</Text>
-          
+
           {/* Location Input - Above Harvest Name */}
           <View style={styles.metrcInputContainer}>
             <View style={styles.metrcLabelContainer}>
@@ -1331,22 +1464,31 @@ export default function HomeScreen({ navigation }) {
                 {tagDetails ? 'Harvest Name' : 'Harvest Name'}
               </Text>
               {isLoadingHarvestDetails && (
-                <ActivityIndicator 
-                  size="small" 
-                  color="#F0AB00" 
+                <ActivityIndicator
+                  size="small"
+                  color="#F0AB00"
                   style={styles.loadingIndicator}
                 />
               )}
             </View>
             <TextInput
+              ref={metrcTagInputRef}
               style={styles.metrcInput}
               placeholder={tagDetails ? "Harvest ID" : "Scan or enter harvest name"}
               value={tagDetails ? tagDetails.harvestName : metrcTag}
-              onChangeText={tagDetails ? undefined : setMetrcTag}
-              onSubmitEditing={tagDetails ? undefined : () => handleMetrcTagEnter(metrcTag)}
-              returnKeyType="done"
+              onChangeText={tagDetails ? undefined : (text) => {
+                setMetrcTag(text);
+                currentMetrcTagRef.current = text; // Store current value for scanner handling
+                // Clear any existing timeout when text changes (scanner is still inputting)
+                if (harvestSubmitTimeoutRef.current) {
+                  clearTimeout(harvestSubmitTimeoutRef.current);
+                }
+              }}
+              returnKeyType="next"
+
               editable={!tagDetails && !isLoadingHarvestDetails}
-              ref={metrcTagInputRef}
+
+              onSubmitEditing={tagDetails ? undefined : () => handleDelayedSubmit(harvestSubmitTimeoutRef, () => handleMetrcTagEnter(currentMetrcTagRef.current))}
             />
           </View>
         </View>
@@ -1360,6 +1502,7 @@ export default function HomeScreen({ navigation }) {
                 <TextInput
                   style={styles.modernInput}
                   value={tagDetails.item}
+                  multiline={true}
                   onChangeText={(text) => updateField('item', text)}
                   placeholder="Enter item"
                   editable={false}
@@ -1380,13 +1523,14 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Cart</Text>
                 <TextInput
+
+                  ref={cartRef}
                   style={styles.modernInput}
+                  placeholder="Scan or enter cart name"
                   value={cartInputText}
                   onChangeText={handleCartInputChange}
-                  onSubmitEditing={validateCartInput}
-                  placeholder="Scan or enter cart name"
-                  ref={cartRef}
                   returnKeyType="next"
+                  onSubmitEditing={() => handleDelayedSubmit(cartSubmitTimeoutRef, validateCartInput)}
                 />
               </View>
 
@@ -1403,23 +1547,25 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Hanger Type</Text>
                 <TextInput
+                ref={hangerRef}
                   style={styles.modernInput}
+                  placeholder="Scan or enter hanger type"
                   value={hangerInputText}
                   onChangeText={handleHangerInputChange}
-                  onSubmitEditing={validateHangerInput}
-                  placeholder="Scan or enter hanger type"
-                  ref={hangerRef}
                   returnKeyType="next"
+                  onSubmitEditing={() => handleDelayedSubmit(hangerSubmitTimeoutRef, validateHangerInput)}
+                  
                 />
               </View>
 
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>No. of hangers</Text>
                 <TextInput
+                  ref={numberOfHangersRef}
                   style={styles.modernInput}
+                  placeholder="Enter number of hangers"
                   value={tagDetails.numberOfHangers}
                   onChangeText={(text) => updateField('numberOfHangers', text)}
-                  placeholder="Enter number of hangers"
                 />
               </View>
 
@@ -1439,8 +1585,8 @@ export default function HomeScreen({ navigation }) {
                 <TextInput
                   style={[
                     styles.modernInput,
-                    tagDetails.numberOfPlants && 
-                    parseFloat(tagDetails.numberOfPlants) > parseFloat(tagDetails.availablePlants) && 
+                    tagDetails.numberOfPlants &&
+                    parseFloat(tagDetails.numberOfPlants) > parseFloat(tagDetails.availablePlants) &&
                     styles.errorInput
                   ]}
                   value={tagDetails.numberOfPlants}
@@ -1475,6 +1621,7 @@ export default function HomeScreen({ navigation }) {
                   value={tagDetails.harvestName}
                   onChangeText={(text) => updateField('harvestName', text)}
                   placeholder="Enter harvest name"
+                  ref={harvestNameDetailsRef}
                 />
               </View>
 
@@ -1512,7 +1659,7 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
 
 
@@ -1523,9 +1670,9 @@ export default function HomeScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setShowLocationDropdown(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setShowLocationDropdown(false)}
         >
           <View style={styles.dropdownModal}>
@@ -1565,8 +1712,8 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={isSubmitting ? styles.submitButtonDisabled : styles.submitButton} 
+          <TouchableOpacity
+            style={isSubmitting ? styles.submitButtonDisabled : styles.submitButton}
             onPress={handleSubmit}
             disabled={isSubmitting}
           >
@@ -1584,9 +1731,9 @@ export default function HomeScreen({ navigation }) {
         animationType="fade"
         onRequestClose={closeAlertDialog}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={closeAlertDialog}
         >
           <View style={styles.alertDialog}>
@@ -1614,7 +1761,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.alertDialogMessage}>
               {alertMessage}
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.alertDialogButton,
                 alertType === 'error' && styles.alertDialogButtonError,
@@ -1636,9 +1783,9 @@ export default function HomeScreen({ navigation }) {
         animationType="fade"
         onRequestClose={closeBatchResultModal}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={closeBatchResultModal}
         >
           <View style={styles.batchResultDialog}>
@@ -1668,7 +1815,7 @@ export default function HomeScreen({ navigation }) {
                 {batchResultMessage}
               </Text>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.batchResultButton,
                 batchResultType === 'success' && styles.batchResultButtonSuccess,
@@ -1689,9 +1836,9 @@ export default function HomeScreen({ navigation }) {
         animationType="fade"
         onRequestClose={cancelLogout}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={cancelLogout}
         >
           <View style={styles.logoutModal}>
