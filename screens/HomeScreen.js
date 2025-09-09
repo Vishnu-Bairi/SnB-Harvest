@@ -1372,6 +1372,13 @@ export default function HomeScreen({ navigation }) {
       setCartInputText('');
     } else if (alertTitle === 'Invalid Hanger') {
       setHangerInputText('');
+    } else if (alertTitle === 'No Records Found') {
+      // Focus back to harvest name field when no records found
+      setTimeout(() => {
+        if (metrcTagInputRef.current) {
+          metrcTagInputRef.current.focus();
+        }
+      }, 100);
     }
   };
 

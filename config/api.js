@@ -32,7 +32,7 @@ export const API_CONFIG = {
   
   // App Configuration
   APP_NAME: apiConfig.appName || 'SH',
-  APP_VERSION: apiConfig.appVersion || '1.0.8',
+  APP_VERSION: apiConfig.appVersion || '1.0.9',
   
   // Timeout Configuration (in milliseconds)
   API_TIMEOUT: apiConfig.apiTimeout || 30000,
