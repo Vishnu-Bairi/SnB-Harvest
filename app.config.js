@@ -2,7 +2,7 @@ export default {
   expo: {
     name: "Harvest",
     slug: "SnB-Harvest",
-    version: "1.0.7",
+    version: "1.0.8",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     userInterfaceStyle: "light",
@@ -64,7 +64,7 @@ export default {
         
         // App Configuration
         appName: 'SH',
-        appVersion: '1.0.7',
+        appVersion: '1.0.8',
         
         // Timeout Configuration (in milliseconds)
         apiTimeout: 30000,
