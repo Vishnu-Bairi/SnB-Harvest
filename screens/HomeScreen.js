@@ -33,6 +33,7 @@ export default function HomeScreen({ navigation }) {
   const numberOfPlantsRef = useRef(null);
   const harvestNameDetailsRef = useRef(null);
   const grossWeightRef = useRef(null);
+  const scrollViewRef = useRef(null);
 
 
   // Add state for cart and hanger input validation
@@ -78,6 +79,9 @@ export default function HomeScreen({ navigation }) {
 
   // Logout confirmation modal state
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // Harvest progress modal state
+  const [showHarvestProgressModal, setShowHarvestProgressModal] = useState(false);
 
   // Check for existing auth token on component mount
   useEffect(() => {
@@ -474,6 +478,22 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  // Handle gross weight submission to scroll to bottom
+  const handleGrossWeightSubmit = () => {
+    // Blur the input first
+    if (grossWeightRef.current) {
+      grossWeightRef.current.blur();
+    }
+    
+    // Scroll to bottom after a short delay
+    setTimeout(() => {
+      // Scroll to the end of the form
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollToEnd({ animated: true });
+      }
+    }, 100);
+  };
+
   // Validate gross weight input to accept only numbers with decimals (max 2 decimal places)
   const validateGrossWeight = (text) => {
     // Remove all non-numeric characters except decimal point
@@ -771,6 +791,7 @@ export default function HomeScreen({ navigation }) {
       }
 
       setIsSubmitting(true);
+      setShowHarvestProgressModal(true); // Show harvest progress popup
 
       // Find the selected location from binLocations
       // console.log("Looking for location with BinCode:", tagDetails.location);
@@ -790,6 +811,7 @@ export default function HomeScreen({ navigation }) {
       if (!selectedLocation) {
         Alert.alert('Error', `No matching location found for: ${tagDetails.location}. Please check the location selection.`);
         setIsSubmitting(false);
+        setShowHarvestProgressModal(false); // Hide harvest progress popup
         return;
       }
 
@@ -954,6 +976,7 @@ export default function HomeScreen({ navigation }) {
                 displayErrorMessage('Update Failed', 'Failed to update harvest record. Please try again.');
                 console.error('Update NPFET failed:', updateResponse);
                 setIsSubmitting(false);
+                setShowHarvestProgressModal(false); // Hide harvest progress popup
                 return;
               }
 
@@ -1117,11 +1140,13 @@ export default function HomeScreen({ navigation }) {
 
               setIsBatchProcessing(false);
               setIsSubmitting(false);
+              setShowHarvestProgressModal(false); // Hide harvest progress popup
 
               console.log('Batch processing completed');
 
             } else {
               displayErrorMessage('Location Mismatch', `Harvest batch already created in different location: ${existingRecord.U_WHSCODE}`);
+              setShowHarvestProgressModal(false); // Hide harvest progress popup
               return;
             }
           } else {
@@ -1178,6 +1203,7 @@ export default function HomeScreen({ navigation }) {
               displayErrorMessage('Create Failed', 'Failed to create harvest record. Please try again.');
               console.error('Create NPFET failed:', createResponse.status);
               setIsSubmitting(false);
+              setShowHarvestProgressModal(false); // Hide harvest progress popup
               return;
             }
 
@@ -1221,12 +1247,14 @@ export default function HomeScreen({ navigation }) {
 
             setIsBatchProcessing(false);
             setIsSubmitting(false);
+            setShowHarvestProgressModal(false); // Hide harvest progress popup
 
 
           }
         } else {
           console.log('First API response is not empty, harvest batch already exists');
           displayErrorMessage('Harvest Batch Exists', 'The entered Harvest Batch already exists. Please enter a different Harvest Batch.');
+          setShowHarvestProgressModal(false); // Hide harvest progress popup
         }
 
       } catch (error) {
@@ -1234,6 +1262,7 @@ export default function HomeScreen({ navigation }) {
         displayErrorMessage('Processing Error', `Failed to process harvest data: ${error.message}`);
       } finally {
         setIsSubmitting(false);
+        setShowHarvestProgressModal(false); // Hide harvest progress popup
       }
     }
   };
@@ -1397,11 +1426,12 @@ export default function HomeScreen({ navigation }) {
       </View>
 
       <KeyboardAwareScrollView
+        ref={scrollViewRef}
         style={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
         contentInsetAdjustmentBehavior="automatic"
-        extraScrollHeight={180}
+        extraScrollHeight={170}
         enableOnAndroid={true}
 
       >
@@ -1634,6 +1664,8 @@ export default function HomeScreen({ navigation }) {
                   placeholder="Enter gross weight"
                   keyboardType="numeric"
                   ref={grossWeightRef}
+                  onSubmitEditing={handleGrossWeightSubmit}
+                  returnKeyType="next"
                 />
               </View>
 
@@ -1859,6 +1891,26 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Harvest Progress Modal */}
+      <Modal
+        visible={showHarvestProgressModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}} // Prevent closing during harvest process
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.harvestProgressModal}>
+            <View style={styles.harvestProgressHeader}>
+              <ActivityIndicator size="large" color="#53B253" />
+              <Text style={styles.harvestProgressTitle}>Harvest in Progress</Text>
+            </View>
+            <Text style={styles.harvestProgressMessage}>
+              Please wait while we process your harvest request. This may take a few moments.
+            </Text>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -2446,5 +2498,35 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Harvest progress modal styles
+  harvestProgressModal: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: '85%',
+    maxWidth: 400,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    padding: 24,
+  },
+  harvestProgressHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  harvestProgressTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#53B253',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  harvestProgressMessage: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 24,
+    textAlign: 'center',
   },
 });
