@@ -20,6 +20,7 @@ export default function HomeScreen({ navigation }) {
     hanger: [],
     binLocations: []
   });
+  
   const [selectedLocationValue, setSelectedLocationValue] = useState('');
 
   // Add ref for metrc tag input
