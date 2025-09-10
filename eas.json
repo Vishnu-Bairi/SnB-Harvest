@@ -4,21 +4,20 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
+    "test": {
+      "env": {
+        "EXPO_PUBLIC_ENV": "test"
+      },
+      "distribution": "internal",
+      "autoIncrement": false,
+      "android": {
+        "buildType": "apk"
+      }
     },
     "production": {
-      "autoIncrement": false
-    },
-    "simple": {
-      "distribution": "internal",
-      "autoIncrement": false
-    },
-    "basic": {
+      "env": {
+        "EXPO_PUBLIC_ENV": "production"
+      },
       "distribution": "internal",
       "autoIncrement": false,
       "android": {
