@@ -16,7 +16,7 @@ const getConfig = (env = 'test') => {
     expo: {
       name: env === 'production' ? "Harvest" : "Harvest Test",
       slug: "SnB-Harvest",
-      version: "1.0.9",
+      version: "1.0.10",
       orientation: "portrait",
       icon: "./assets/images/icon.png",
       userInterfaceStyle: "light",
@@ -27,7 +27,7 @@ const getConfig = (env = 'test') => {
         backgroundColor: "#ffffff"
       },
       updates: {
-        url: "https://u.expo.dev/f4ac27b7-e9ff-4f7f-9bd9-b0e79883c802"
+        "url": "https://u.expo.dev/6d393036-7040-4f15-9cd0-256feb7e0f83"
       },
       runtimeVersion: {
         policy: "appVersion"
@@ -78,7 +78,7 @@ const getConfig = (env = 'test') => {
           
           // App Configuration
           appName: 'SH',
-          appVersion: '1.0.9',
+          appVersion: '1.0.10',
           
           // Timeout Configuration (in milliseconds)
           apiTimeout: 30000,

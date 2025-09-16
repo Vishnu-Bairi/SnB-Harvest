@@ -10,6 +10,7 @@
       },
       "distribution": "internal",
       "autoIncrement": false,
+      "channel": "test",
       "android": {
         "buildType": "apk"
       }
@@ -20,6 +21,7 @@
       },
       "distribution": "internal",
       "autoIncrement": false,
+      "channel": "production",
       "android": {
         "buildType": "apk"
       }

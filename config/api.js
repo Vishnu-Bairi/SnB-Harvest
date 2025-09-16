@@ -32,7 +32,7 @@ export const API_CONFIG = {
   
   // App Configuration
   APP_NAME: apiConfig.appName || 'SH',
-  APP_VERSION: apiConfig.appVersion || '1.0.9',
+  APP_VERSION: apiConfig.appVersion || '1.0.10',
   
   // Timeout Configuration (in milliseconds)
   API_TIMEOUT: apiConfig.apiTimeout || 30000,
@@ -42,7 +42,7 @@ export const API_CONFIG = {
   BATCH_SIZE: apiConfig.batchSize || 200,
   
   // Scanner Configuration
-  SCANNER_DELAY: apiConfig.scannerDelay || 300, // Delay in milliseconds for scanner input processing
+  SCANNER_DELAY: apiConfig.scannerDelay || 100, // Delay in milliseconds for scanner input processing
 };
 
 // Helper function to build full API URLs

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Alert, Modal, FlatList, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Alert, Modal, FlatList, ActivityIndicator, SafeAreaView, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -282,6 +282,8 @@ export default function HomeScreen({ navigation }) {
       return;
     }
 
+    // Disable both location and harvest name fields immediately
+    // This prevents any cursor movement issues
     setIsLoadingHarvestDetails(true);
 
     try {
@@ -480,10 +482,34 @@ export default function HomeScreen({ navigation }) {
 
   // Handle gross weight submission to scroll to bottom
   const handleGrossWeightSubmit = () => {
-    // Blur the input first
+    // First blur the current input
     if (grossWeightRef.current) {
       grossWeightRef.current.blur();
     }
+    
+    // Dismiss keyboard completely
+    Keyboard.dismiss();
+    
+    // Force blur all other inputs immediately
+    if (locationRef.current) locationRef.current.blur();
+    if (metrcTagInputRef.current) metrcTagInputRef.current.blur();
+    if (cartRef.current) cartRef.current.blur();
+    if (hangerRef.current) hangerRef.current.blur();
+    if (numberOfHangersRef.current) numberOfHangersRef.current.blur();
+    if (numberOfPlantsRef.current) numberOfPlantsRef.current.blur();
+    if (harvestNameDetailsRef.current) harvestNameDetailsRef.current.blur();
+    
+    // Additional blur after a short delay to ensure it sticks
+    setTimeout(() => {
+      if (locationRef.current) locationRef.current.blur();
+      if (metrcTagInputRef.current) metrcTagInputRef.current.blur();
+      if (cartRef.current) cartRef.current.blur();
+      if (hangerRef.current) hangerRef.current.blur();
+      if (numberOfHangersRef.current) numberOfHangersRef.current.blur();
+      if (numberOfPlantsRef.current) numberOfPlantsRef.current.blur();
+      if (harvestNameDetailsRef.current) harvestNameDetailsRef.current.blur();
+      if (grossWeightRef.current) grossWeightRef.current.blur();
+    }, 100);
     
     // Scroll to bottom after a short delay
     setTimeout(() => {
@@ -491,7 +517,7 @@ export default function HomeScreen({ navigation }) {
       if (scrollViewRef.current) {
         scrollViewRef.current.scrollToEnd({ animated: true });
       }
-    }, 100);
+    }, 200);
   };
 
   // Validate gross weight input to accept only numbers with decimals (max 2 decimal places)
@@ -1401,7 +1427,12 @@ export default function HomeScreen({ navigation }) {
             {username && (
               <Text style={styles.usernameText}>{username}</Text>
             )}
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <TouchableOpacity 
+              style={styles.logoutButton} 
+              onPress={handleLogout}
+              accessible={false}
+              focusable={false}
+            >
               <Ionicons name="log-out-outline" size={24} color="#666" />
             </TouchableOpacity>
           </View>
@@ -1426,7 +1457,12 @@ export default function HomeScreen({ navigation }) {
           {username && (
             <Text style={styles.usernameText}>{username}</Text>
           )}
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={handleLogout}
+            accessible={false}
+            focusable={false}
+          >
             <Ionicons name="log-out-outline" size={24} color="#666" />
           </TouchableOpacity>
         </View>
@@ -1521,7 +1557,7 @@ export default function HomeScreen({ navigation }) {
                   clearTimeout(harvestSubmitTimeoutRef.current);
                 }
               }}
-              returnKeyType="next"
+              returnKeyType="done"
 
               editable={!tagDetails && !isLoadingHarvestDetails}
 
@@ -1671,8 +1707,11 @@ export default function HomeScreen({ navigation }) {
                   placeholder="Enter gross weight"
                   keyboardType="numeric"
                   ref={grossWeightRef}
-                  onSubmitEditing={handleGrossWeightSubmit}
-                  returnKeyType="next"
+                  onSubmitEditing={(e) => {
+                    e.preventDefault();
+                    handleGrossWeightSubmit();
+                  }}
+                  returnKeyType="done"
                 />
               </View>
 
