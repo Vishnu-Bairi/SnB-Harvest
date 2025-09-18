@@ -54,6 +54,9 @@ export default function HomeScreen({ navigation }) {
   // Loading state for harvest details fetch
   const [isLoadingHarvestDetails, setIsLoadingHarvestDetails] = useState(false);
 
+  // Loading popup state for harvest name processing
+  const [showHarvestNameLoadingModal, setShowHarvestNameLoadingModal] = useState(false);
+
   // Location dropdown state variables
   const [locationSearchText, setLocationSearchText] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
@@ -282,8 +285,8 @@ export default function HomeScreen({ navigation }) {
       return;
     }
 
-    // Disable both location and harvest name fields immediately
-    // This prevents any cursor movement issues
+    // Show loading popup and disable both location and harvest name fields immediately
+    setShowHarvestNameLoadingModal(true);
     setIsLoadingHarvestDetails(true);
 
     try {
@@ -400,6 +403,7 @@ export default function HomeScreen({ navigation }) {
       showAlertDialogMessage('Processing Error', 'Failed to process harvest name. Please try again.', 'error');
     } finally {
       setIsLoadingHarvestDetails(false);
+      setShowHarvestNameLoadingModal(false);
     }
   };
 
@@ -477,6 +481,8 @@ export default function HomeScreen({ navigation }) {
   const handleNumberOfPlantsSubmit = () => {
     if (grossWeightRef.current) {
       grossWeightRef.current.focus();
+      // Scroll to the gross weight input field
+      scrollToInput(grossWeightRef);
     }
   };
 
@@ -596,10 +602,12 @@ export default function HomeScreen({ navigation }) {
         cartWeight: weight ? weight.toString() : ''
       }));
 
-      // Focus on hanger after successful cart validation
+      // Focus on hanger after successful cart validation and scroll to it
       setTimeout(() => {
         if (hangerRef.current) {
           hangerRef.current.focus();
+          // Scroll to the hanger input field
+          scrollToInput(hangerRef);
         }
       }, 100);
     } else {
@@ -685,10 +693,12 @@ export default function HomeScreen({ navigation }) {
       }));
 
       // console.log('Hanger validation successful, focusing on number of plants');
-      // Focus on number of plants after successful hanger validation
+      // Focus on number of plants after successful hanger validation and scroll to it
       setTimeout(() => {
         if (numberOfPlantsRef.current) {
           numberOfPlantsRef.current.focus();
+          // Scroll to the number of plants input field
+          scrollToInput(numberOfPlantsRef);
         }
       }, 100);
     } else {
@@ -723,6 +733,22 @@ export default function HomeScreen({ navigation }) {
       }
     }
     return null;
+  };
+
+  // Helper function to scroll to a specific input field
+  const scrollToInput = (inputRef, delay = 100) => {
+    setTimeout(() => {
+      if (inputRef.current && scrollViewRef.current) {
+        // For KeyboardAwareScrollView, use scrollToFocusedInput method
+        if (scrollViewRef.current.scrollToFocusedInput) {
+          scrollViewRef.current.scrollToFocusedInput(inputRef.current, 100);
+        }
+        // Fallback to scrollToEnd if scrollToFocusedInput is not available
+        else if (scrollViewRef.current.scrollToEnd) {
+          scrollViewRef.current.scrollToEnd({ animated: true });
+        }
+      }
+    }, delay);
   };
 
 
@@ -1476,7 +1502,6 @@ export default function HomeScreen({ navigation }) {
         contentInsetAdjustmentBehavior="automatic"
         extraScrollHeight={170}
         enableOnAndroid={true}
-
       >
 
 
@@ -1536,13 +1561,6 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.metrcLabel}>
                 {tagDetails ? 'Harvest Name' : 'Harvest Name'}
               </Text>
-              {isLoadingHarvestDetails && (
-                <ActivityIndicator
-                  size="small"
-                  color="#F0AB00"
-                  style={styles.loadingIndicator}
-                />
-              )}
             </View>
             <TextInput
               ref={metrcTagInputRef}
@@ -1954,6 +1972,26 @@ export default function HomeScreen({ navigation }) {
             </View>
             <Text style={styles.harvestProgressMessage}>
               Please wait while we process your harvest request. This may take a few moments.
+            </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Harvest Name Loading Modal */}
+      <Modal
+        visible={showHarvestNameLoadingModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}} // Prevent closing during loading
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.harvestNameLoadingModal}>
+            <View style={styles.harvestNameLoadingHeader}>
+              <ActivityIndicator size="large" color="#F0AB00" />
+              <Text style={styles.harvestNameLoadingTitle}>Processing Harvest Name</Text>
+            </View>
+            <Text style={styles.harvestNameLoadingMessage}>
+              Please wait while we validate and load harvest data...
             </Text>
           </View>
         </View>
@@ -2570,6 +2608,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   harvestProgressMessage: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  // Harvest name loading modal styles
+  harvestNameLoadingModal: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: '85%',
+    maxWidth: 400,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    padding: 24,
+  },
+  harvestNameLoadingHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  harvestNameLoadingTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#F0AB00',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  harvestNameLoadingMessage: {
     fontSize: 16,
     color: '#666',
     lineHeight: 24,
