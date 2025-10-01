@@ -328,8 +328,13 @@ export default function HomeScreen({ navigation }) {
         showAlertDialogMessage('Missing Data', 'Missing required fields in the record. Please contact support.', 'error');
         return;
       }
+      const escapedQuotesItemName = data.value[0].StrainName.replace(/'/g, "''");
+      var strainNameValue = encodeURIComponent(escapedQuotesItemName);
+      console.log('strain name', strainNameValue);
 
-      const ItemNameValue = data.value[0].StrainName + " - " + "Wet Cannabis";
+      const ItemNameValue = strainNameValue + " - " + "Wet Cannabis";
+
+      console.log('ItemNameValue', ItemNameValue);
 
       const binLocationsResponse = await fetch(`${API_URLS.BIN_LOCATIONS}?$filter=U_MetrcLicense eq '${metricLicense}'&$orderby=BinCode asc,U_MetrcLicense asc`, {
         method: 'GET',
@@ -338,6 +343,8 @@ export default function HomeScreen({ navigation }) {
           'Authorization': `Basic ${authToken}`,
         }
       });
+
+      console.log('api call', `${API_URLS.ITEMS}?$filter=ItemName eq '${ItemNameValue}'&$select=ItemName,ItemCode`);
 
       // Filter Items by ItemName
       const itemsResponse = await fetch(`${API_URLS.ITEMS}?$filter=ItemName eq '${ItemNameValue}'&$select=ItemName,ItemCode`, {
@@ -351,6 +358,8 @@ export default function HomeScreen({ navigation }) {
       // Process responses
       const binLocationsData = binLocationsResponse.ok ? await binLocationsResponse.json() : [];
       const itemsData = itemsResponse.ok ? await itemsResponse.json() : [];
+
+      console.log('itemsData', itemsData);
 
       // Store the filtered values in apiData
       setApiData(prevData => {

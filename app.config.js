@@ -4,6 +4,10 @@ const getConfig = (env = 'test') => {
       baseUrl: 'https://ghdev.seedandbeyond.com:50000',
       companyDb: '__QAS',
     },
+    dev: {
+      baseUrl: 'https://ghdev.seedandbeyond.com:50000',
+      companyDb: '_DEV',
+    },
     production: {
       baseUrl: 'https://glasshouseweb.seedandbeyond.com:50000',
       companyDb: 'LIVE'
@@ -40,6 +44,7 @@ const getConfig = (env = 'test') => {
         }
       },
       android: {
+        versionCode: 2,
         adaptiveIcon: {
           foregroundImage: "./assets/images/adaptive-icon.png",
           backgroundColor: "#000000"

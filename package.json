@@ -1,4 +1,3 @@
-
 {
   "name": "snb-harvest",
   "version": "1.0.10",
@@ -6,17 +5,21 @@
   "scripts": {
     "start": "expo start",
     "start:test": "cross-env EXPO_PUBLIC_ENV=test expo start",
+    "start:dev": "cross-env EXPO_PUBLIC_ENV=dev expo start",
     "start:production": "cross-env EXPO_PUBLIC_ENV=production expo start",
     "android": "expo start --android",
     "android:test": "cross-env EXPO_PUBLIC_ENV=test expo start --android",
+    "android:dev": "cross-env EXPO_PUBLIC_ENV=dev expo start --android",
     "android:production": "cross-env EXPO_PUBLIC_ENV=production expo start --android",
     "ios": "expo start --ios",
     "ios:test": "cross-env EXPO_PUBLIC_ENV=test expo start --ios",
     "ios:production": "cross-env EXPO_PUBLIC_ENV=production expo start --ios",
     "web": "expo start --web",
     "build:test": "eas build --profile test",
+    "build:dev": "eas build --profile dev",
     "build:production": "eas build --profile production",
     "build:test:android": "eas build --profile test --platform android",
+    "build:dev:android": "eas build --profile dev --platform android",
     "build:test:ios": "eas build --profile test --platform ios",
     "build:production:android": "eas build --profile production --platform android",
     "build:production:ios": "eas build --profile production --platform ios"
@@ -37,7 +40,8 @@
     "react-native-gesture-handler": "^2.28.0",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-safe-area-context": "^5.6.0",
-    "react-native-screens": "^4.14.1"
+    "react-native-screens": "^4.14.1",
+    "expo-router": "~5.1.7"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

@@ -388,6 +388,11 @@ export default function LoginScreen({ navigation }) {
           </TouchableOpacity>
         </Modal>
       )}
+
+      {/* Version Text at Bottom */}
+      <View style={styles.versionContainer}>
+        <Text style={styles.versionText}>Version 1.0.10.1</Text>
+      </View>
     </View>
   );
 }
@@ -584,6 +589,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#333',
     marginTop: 20,
+    textAlign: 'center',
+  },
+  versionContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  versionText: {
+    fontSize: 13,
+    color: 'black',
     textAlign: 'center',
   },
 });
