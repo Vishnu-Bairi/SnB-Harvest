@@ -1,12 +1,12 @@
 const getConfig = (env = 'test') => {
   const configs = {
     test: {
-      baseUrl: 'https://ghdev.seedandbeyond.com:50000',
-      companyDb: '__QAS',
+      baseUrl: 'https://ghdev.seedandbeyond.com:20100',
+      companyDb: 'QAS',
     },
     dev: {
-      baseUrl: 'https://ghdev.seedandbeyond.com:50000',
-      companyDb: '_DEV',
+      baseUrl: 'https://ghdev.seedandbeyond.com:20100',
+      companyDb: 'DEV',
     },
     production: {
       baseUrl: 'https://glasshouseweb.seedandbeyond.com:50000',
@@ -20,7 +20,7 @@ const getConfig = (env = 'test') => {
     expo: {
       name: env === 'production' ? "Harvest" : "Harvest Test",
       slug: "SnB-Harvest",
-      version: "1.0.10",
+      version: "1.0.11",
       orientation: "portrait",
       icon: "./assets/images/icon.png",
       userInterfaceStyle: "light",
@@ -44,7 +44,7 @@ const getConfig = (env = 'test') => {
         }
       },
       android: {
-        versionCode: 2,
+        versionCode: 3,
         adaptiveIcon: {
           foregroundImage: "./assets/images/adaptive-icon.png",
           backgroundColor: "#000000"
@@ -83,7 +83,7 @@ const getConfig = (env = 'test') => {
           
           // App Configuration
           appName: 'SH',
-          appVersion: '1.0.10',
+          appVersion: '1.0.11',
           
           // Timeout Configuration (in milliseconds)
           apiTimeout: 30000,

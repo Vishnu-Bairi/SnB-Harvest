@@ -391,7 +391,7 @@ export default function LoginScreen({ navigation }) {
 
       {/* Version Text at Bottom */}
       <View style={styles.versionContainer}>
-        <Text style={styles.versionText}>Version 1.0.10.1</Text>
+        <Text style={styles.versionText}>Version 1.0.11</Text>
       </View>
     </View>
   );

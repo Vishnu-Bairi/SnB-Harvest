@@ -8,11 +8,11 @@ const apiConfig = Constants.expoConfig?.extra?.apiConfig || {};
 
 export const API_CONFIG = {
   // Base URL
-  BASE_URL: apiConfig.baseUrl || 'https://ghdev.seedandbeyond.com:50000',
+  BASE_URL: apiConfig.baseUrl || 'https://ghdev.seedandbeyond.com:20100',
   API_VERSION: apiConfig.apiVersion || '/b1s/v1',
   
   // Company Configuration
-  COMPANY_DB: apiConfig.companyDb || '__QAS',
+  COMPANY_DB: apiConfig.companyDb || 'DEV',
   
   // Authentication Endpoints
   LOGIN: apiConfig.login || '/Login',
@@ -32,7 +32,7 @@ export const API_CONFIG = {
   
   // App Configuration
   APP_NAME: apiConfig.appName || 'SH',
-  APP_VERSION: apiConfig.appVersion || '1.0.10',
+  APP_VERSION: apiConfig.appVersion || '1.0.11',
   
   // Timeout Configuration (in milliseconds)
   API_TIMEOUT: apiConfig.apiTimeout || 30000,
