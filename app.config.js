@@ -44,7 +44,6 @@ const getConfig = (env = 'test') => {
         }
       },
       android: {
-        versionCode: 3,
         adaptiveIcon: {
           foregroundImage: "./assets/images/adaptive-icon.png",
           backgroundColor: "#000000"

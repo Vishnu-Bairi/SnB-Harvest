@@ -9,7 +9,7 @@
         "EXPO_PUBLIC_ENV": "dev"
       },
       "distribution": "internal",
-      "autoIncrement": false,
+      "autoIncrement": true,
       "channel": "dev",
       "android": {
         "buildType": "apk"
@@ -20,7 +20,7 @@
         "EXPO_PUBLIC_ENV": "test"
       },
       "distribution": "internal",
-      "autoIncrement": false,
+      "autoIncrement": true,
       "channel": "test",
       "android": {
         "buildType": "apk"
@@ -31,7 +31,7 @@
         "EXPO_PUBLIC_ENV": "production"
       },
       "distribution": "internal",
-      "autoIncrement": false,
+      "autoIncrement": true,
       "channel": "production",
       "android": {
         "buildType": "apk"
